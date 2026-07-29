@@ -18,7 +18,7 @@ VIP_DB = {
         "3e110c": {"country": "ドイツ", "type": "A350-900", "reg": "10+01", "owner": "German Air Force"},
         "3e1271": {"country": "ドイツ", "type": "A350-900", "reg": "10+02", "owner": "German Air Force"},
         "3b77da": {"country": "フランス", "type": "A330-200", "reg": "F-RARF", "owner": "French Air Force"},
-        "71BE43": {"country": "韓国", "type": "B747-8I", "reg": "21001", "owner": "Republic of Korea Air Force"},
+        "71be43": {"country": "韓国", "type": "B747-8I", "reg": "21001", "owner": "Republic of Korea Air Force"},
         "c2b3ea": {"country": "カナダ", "type": "CC-150", "reg": "15001", "owner": "Royal Canadian Air Force"},
         "7cf9d6": {"country": "オーストラリア", "type": "B737-700", "reg": "A39-007", "owner": "Royal Australian Air Force"},
         "480c00": {"country": "オランダ", "type": "B737-700", "reg": "PH-GOV", "owner": "Netherlands Government"},
