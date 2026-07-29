@@ -1,0 +1,33 @@
+name: VIP Flight Tracker Cron
+
+on:
+  schedule:
+    # 5分ごとに実行 (GitHub Actions の最短サポートは5分間隔です)
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # 手動実行も可能にする
+
+jobs:
+  run-tracker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install pandas numpy requests
+
+      - name: Run tracker script
+        run: python tracker.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add flight_history.csv
+          git commit -m "Auto-update flight history [skip ci]" || exit 0
+          git push
