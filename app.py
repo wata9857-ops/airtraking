@@ -234,12 +234,21 @@ CSV_FILE = "flight_history.csv"
 # APIキャッシュの設定 (30秒ごとに更新可能)
 @st.cache_data(ttl=30)
 def get_flight_data():
-    # 完全無料のOpenSky Network APIを利用
     url = "https://opensky-network.org/api/states/all"
+    
+    # 追加: VIP_DBのHexコードをリスト化してパラメータで渡す（APIの負荷軽減と制限回避）
+    params = {"icao24": list(VIP_DB.keys())}
+    # 追加: ボットとして弾かれるのを防ぐためのUser-Agent
+    headers = {"User-Agent": "VIP-Flight-Tracker-App/1.0"}
+    
     try:
-        response = requests.get(url, timeout=10)
+        # timeoutを少し長めに設定し、paramsとheadersを渡す
+        response = requests.get(url, params=params, headers=headers, timeout=15)
         if response.status_code == 200:
-            return response.json().get("states", [])
+            # 修正: 飛行機が1機もいない場合 states が None になるため or [] で確実に対処
+            return response.json().get("states") or []
+        else:
+            st.warning(f"APIアクセス制限またはエラー: HTTP {response.status_code}")
     except Exception as e:
         st.error(f"API取得エラー: {e}")
     return []

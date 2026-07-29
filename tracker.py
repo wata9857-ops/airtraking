@@ -237,9 +237,15 @@ def track_and_record():
     # 実行されたその瞬間のスナップショットだけを取得し、履歴としてCSVに追記するシンプルな作りに変更します。
     try:
         url = "https://opensky-network.org/api/states/all"
-        response = requests.get(url, timeout=10)
+        
+        # 追加: API制限回避のための絞り込みとヘッダー
+        params = {"icao24": list(VIP_DB.keys())}
+        headers = {"User-Agent": "VIP-Flight-Tracker-App/1.0"}
+        
+        response = requests.get(url, params=params, headers=headers, timeout=15)
         if response.status_code == 200:
-            states = response.json().get("states", [])
+            # 修正: Noneが返ってきた場合のクラッシュ防止
+            states = response.json().get("states") or []
             completed_flights = []
             
             for flight in states:
