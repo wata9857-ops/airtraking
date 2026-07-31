@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
@@ -26,8 +26,8 @@ jobs:
 
       - name: Commit and push changes
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
           git add flight_history.csv
-          git commit -m "Auto-update flight history [skip ci]" || exit 0
-          git push
+          # 変更がある場合のみコミットとプッシュを行うように修正
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update flight history" && git push)

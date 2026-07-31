@@ -238,11 +238,11 @@ def track_and_record():
     try:
         url = "https://opensky-network.org/api/states/all"
         
-        # 追加: API制限回避のための絞り込みとヘッダー
-        params = {"icao24": list(VIP_DB.keys())}
+        # 追加: ボットとして弾かれるのを防ぐためのUser-Agent
         headers = {"User-Agent": "VIP-Flight-Tracker-App/1.0"}
         
-        response = requests.get(url, params=params, headers=headers, timeout=15)
+        # 修正: paramsによる絞り込みを削除
+        response = requests.get(url, headers=headers, timeout=15)
         if response.status_code == 200:
             # 修正: Noneが返ってきた場合のクラッシュ防止
             states = response.json().get("states") or []

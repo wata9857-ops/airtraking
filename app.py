@@ -236,14 +236,12 @@ CSV_FILE = "flight_history.csv"
 def get_flight_data():
     url = "https://opensky-network.org/api/states/all"
     
-    # 追加: VIP_DBのHexコードをリスト化してパラメータで渡す（APIの負荷軽減と制限回避）
-    params = {"icao24": list(VIP_DB.keys())}
     # 追加: ボットとして弾かれるのを防ぐためのUser-Agent
     headers = {"User-Agent": "VIP-Flight-Tracker-App/1.0"}
     
     try:
-        # timeoutを少し長めに設定し、paramsとheadersを渡す
-        response = requests.get(url, params=params, headers=headers, timeout=15)
+        # 修正: paramsを削除し、一度全ての機体を取得してからローカルでフィルタリングする
+        response = requests.get(url, headers=headers, timeout=15)
         if response.status_code == 200:
             # 修正: 飛行機が1機もいない場合 states が None になるため or [] で確実に対処
             return response.json().get("states") or []
