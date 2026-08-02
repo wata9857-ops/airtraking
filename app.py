@@ -241,8 +241,12 @@ def get_flight_data():
     
     # 追加: Streamlit SecretsからOpenSkyの認証情報を取得
     auth = None
-    if "OPENSKY_USERNAME" in st.secrets and "OPENSKY_PASSWORD" in st.secrets:
-        auth = (st.secrets["OPENSKY_USERNAME"], st.secrets["OPENSKY_PASSWORD"])
+    try:
+        if "OPENSKY_USERNAME" in st.secrets and "OPENSKY_PASSWORD" in st.secrets:
+            auth = (st.secrets["OPENSKY_USERNAME"], st.secrets["OPENSKY_PASSWORD"])
+    except Exception:
+        # secrets.tomlが存在しないローカル環境等ではエラーを無視（認証なしで実行）
+        pass
     
     try:
         # 修正: auth引数を追加して認証付きリクエストを送る
