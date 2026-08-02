@@ -278,25 +278,59 @@ def get_token_manager():
     return TokenManager()
 
 # APIキャッシュの設定 (30秒ごとに更新可能)
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=30, show_spinner=False)
 def get_flight_data():
     url = "https://opensky-network.org/api/states/all"
     tokens = get_token_manager()
     
+    # 状態確認用のステータス辞書
+    debug_info = {
+        "status_code": None,
+        "states_count": 0,
+        "rate_limit_remaining": "不明",
+        "error_message": None,
+        "token_fetched": False
+    }
+    
     try:
-        # 修正: TokenManagerから生成したヘッダー（Bearerトークン含む）を使用する
-        response = requests.get(url, headers=tokens.headers(), timeout=15)
+        headers = tokens.headers()
+        debug_info["token_fetched"] = bool(tokens.token)
+        
+        response = requests.get(url, headers=headers, timeout=15)
+        debug_info["status_code"] = response.status_code
+        
+        # クレジット残量を取得[cite: 1]
+        debug_info["rate_limit_remaining"] = response.headers.get("X-Rate-Limit-Remaining", "取得不可")
+        
         if response.status_code == 200:
-            # 修正: 飛行機が1機もいない場合 states が None になるため or [] で確実に対処
-            return response.json().get("states") or []
+            data = response.json()
+            states = data.get("states")
+            
+            if states is None:
+                debug_info["error_message"] = "HTTP 200ですが、statesが空(None)です（クラウドIP制限の可能性）"
+                return [], debug_info
+            
+            debug_info["states_count"] = len(states)
+            return states, debug_info
         else:
-            st.warning(f"APIアクセス制限またはエラー: HTTP {response.status_code}")
+            debug_info["error_message"] = response.text
+            return [], debug_info
+            
     except Exception as e:
-        st.error(f"API取得エラー: {e}")
-    return []
+        debug_info["error_message"] = str(e)
+        return [], debug_info
 
-# データ取得の実行
-raw_data = get_flight_data()
+# データ取得の実行とデバッグ情報の受け取り
+raw_data, api_debug = get_flight_data()
+
+# --- 追加: デバッグパネルの表示 (原因究明用) ---
+with st.expander("🛠️ API通信デバッグステータス (Streamlit Cloud確認用)", expanded=True):
+    st.write(f"- **HTTPステータス:** {api_debug['status_code']}")
+    st.write(f"- **APIから取得した総機体数:** {api_debug['states_count']} 機")
+    st.write(f"- **API残クレジット:** {api_debug['rate_limit_remaining']}")
+    st.write(f"- **トークン取得状況:** {api_debug['token_fetched']}")
+    if api_debug["error_message"]:
+        st.error(f"エラー詳細: {api_debug['error_message']}")
 
 # データのフィルタリングと整形
 tracked_flights = []
