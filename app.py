@@ -4,10 +4,51 @@ import numpy as np
 import folium
 from streamlit_folium import st_folium
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import time
 import threading
+
+# --- 修正: OpenSky Token Managerの追加 ---
+class TokenManager:
+    def __init__(self):
+        self.token = None
+        self.expires_at = None
+        self.token_url = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
+
+    def get_token(self):
+        if self.token and self.expires_at and datetime.now() < self.expires_at:
+            return self.token
+        return self._refresh()
+
+    def _refresh(self):
+        try:
+            client_id = st.secrets["OPENSKY_CLIENT_ID"]
+            client_secret = st.secrets["OPENSKY_CLIENT_SECRET"]
+        except (KeyError, FileNotFoundError):
+            return None # Secretsがない場合はNoneを返す
+
+        r = requests.post(
+            self.token_url,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": client_id,
+                "client_secret": client_secret,
+            },
+        )
+        r.raise_for_status()
+        data = r.json()
+        self.token = data["access_token"]
+        expires_in = data.get("expires_in", 1800)
+        self.expires_at = datetime.now() + timedelta(seconds=expires_in - 30)
+        return self.token
+
+    def headers(self):
+        token = self.get_token()
+        headers = {"User-Agent": "VIP-Flight-Tracker-App/1.0"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        return headers
 
 # ページ全体のレイアウト設定
 st.set_page_config(page_title="VIP & Military Flight Tracker", layout="wide")
@@ -231,26 +272,20 @@ VIP_DB = {
 CSV_FILE = "flight_history.csv"
 # -----------------------------------------
 
+# TokenManagerのインスタンスをキャッシュしてセッション間で維持
+@st.cache_resource
+def get_token_manager():
+    return TokenManager()
+
 # APIキャッシュの設定 (30秒ごとに更新可能)
 @st.cache_data(ttl=30)
 def get_flight_data():
     url = "https://opensky-network.org/api/states/all"
-    
-    # 追加: ボットとして弾かれるのを防ぐためのUser-Agent
-    headers = {"User-Agent": "VIP-Flight-Tracker-App/1.0"}
-    
-    # 追加: Streamlit SecretsからOpenSkyの認証情報を取得
-    auth = None
-    try:
-        if "OPENSKY_USERNAME" in st.secrets and "OPENSKY_PASSWORD" in st.secrets:
-            auth = (st.secrets["OPENSKY_USERNAME"], st.secrets["OPENSKY_PASSWORD"])
-    except Exception:
-        # secrets.tomlが存在しないローカル環境等ではエラーを無視（認証なしで実行）
-        pass
+    tokens = get_token_manager()
     
     try:
-        # 修正: auth引数を追加して認証付きリクエストを送る
-        response = requests.get(url, headers=headers, auth=auth, timeout=15)
+        # 修正: TokenManagerから生成したヘッダー（Bearerトークン含む）を使用する
+        response = requests.get(url, headers=tokens.headers(), timeout=15)
         if response.status_code == 200:
             # 修正: 飛行機が1機もいない場合 states が None になるため or [] で確実に対処
             return response.json().get("states") or []
