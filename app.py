@@ -239,9 +239,14 @@ def get_flight_data():
     # 追加: ボットとして弾かれるのを防ぐためのUser-Agent
     headers = {"User-Agent": "VIP-Flight-Tracker-App/1.0"}
     
+    # 追加: Streamlit SecretsからOpenSkyの認証情報を取得
+    auth = None
+    if "OPENSKY_USERNAME" in st.secrets and "OPENSKY_PASSWORD" in st.secrets:
+        auth = (st.secrets["OPENSKY_USERNAME"], st.secrets["OPENSKY_PASSWORD"])
+    
     try:
-        # 修正: paramsを削除し、一度全ての機体を取得してからローカルでフィルタリングする
-        response = requests.get(url, headers=headers, timeout=15)
+        # 修正: auth引数を追加して認証付きリクエストを送る
+        response = requests.get(url, headers=headers, auth=auth, timeout=15)
         if response.status_code == 200:
             # 修正: 飛行機が1機もいない場合 states が None になるため or [] で確実に対処
             return response.json().get("states") or []
@@ -331,8 +336,8 @@ if st.button("🔄 履歴データを最新に更新"):
 if os.path.isfile(CSV_FILE):
     try:
         history_df = pd.read_csv(CSV_FILE)
-        # 最新のデータが上に来るように到着時刻で降順ソート
-        st.dataframe(history_df.sort_values(by="到着時刻(最終検知)", ascending=False), height=300)
+        # 修正: '到着時刻(最終検知)' ではなく '記録時刻' で降順ソートするように変更
+        st.dataframe(history_df.sort_values(by="記録時刻", ascending=False), height=300)
         
         # CSVダウンロードボタン
         with open(CSV_FILE, "rb") as file:
